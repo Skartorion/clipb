@@ -5,7 +5,8 @@
 #include <cstdlib>
 #include <sstream>
 #include <filesystem>
-#include<libgen.h>
+#include <libgen.h>
+
 using namespace std;
 namespace fs = filesystem;
 
@@ -35,27 +36,40 @@ void save_commands(const map<int, string>& commands) {
     }
 }
 
-int main(int argc, char* argv[]) 
-{
-    char* base = basename(argv[0]);
-string progname = base;
+int main(int argc, char* argv[]) {
+    string progname = basename(argv[0]);
 
-if (progname == "cl" && argc >= 2) 
-{
-    string slot_arg = argv[1];
-    const char* fake_argv[] = {"clipb", "exec", slot_arg.c_str()};
-    argc = 3;
-    argv = const_cast<char**>(fake_argv);  // cast to modify argv
-}
+    if (progname == "cl" && argc >= 2) {
+        string slot_arg = argv[1];
+        static const char* fake_args[4];
+        fake_args[0] = "clipb";
+        fake_args[1] = "exec";
+        fake_args[2] = slot_arg.c_str();
+        fake_args[3] = nullptr;
 
-    if (argc < 2) {
-        cout << "Usage:\n"
-             << "  clipb add \"<command>\" <slot>\n"
-             << "  clipb exec <slot>\n"
-             << "  clipb list\n";
-        return 1;
+        argc = 3;
+        argv = const_cast<char**>(fake_args);
     }
 
+    if (argc < 2 || string(argv[1]) == "--help" || string(argv[1]) == "-h") {
+        cout << "clipb v1.0.0 — your personal command clipboard\n\n"
+             << "Usage:\n"
+             << "  clipb add \"<command>\" <slot>\n"
+             << "  clipb exec <slot>\n"
+             << "  clipb list\n"
+             << "  cl <slot>                (shortcut)\n"
+             << "  clipb --version | -v\n"
+             << "  clipb --help | -h\n";
+        return 0;
+    }
+    
+    if (string(argv[1]) == "--version" || string(argv[1]) == "-v") {
+        cout << "clipb version 1.0.0\n";
+        return 0;
+    }
+    
+
+ 
     string action = argv[1];
     auto commands = load_commands();
 
@@ -94,7 +108,9 @@ if (progname == "cl" && argc >= 2)
         }
     }
     else {
-        cerr << "Unknown command.\n";
+        cerr << "Unknown command: " << action << "\n";
+        cerr << "Try 'clipb --help' for usage.\n";
+        return 1;
     }
 
     return 0;
