@@ -1,0 +1,12 @@
+pkgbase = clipb
+	pkgdesc = CLI clipboard
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/Skartorion/clipb
+	arch = x86_64
+	license = GPL-3.0
+	makedepends = gcc
+	source = clipb.cpp
+	md5sums = SKIP
+
+pkgname = clipb
