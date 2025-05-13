@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <filesystem>
-
+#include<libgen.h>
 using namespace std;
 namespace fs = filesystem;
 
@@ -20,7 +20,7 @@ map<int, string> load_commands() {
     int key;
     string cmd;
     while (file >> key) {
-        file.ignore(); // skip space
+        file.ignore(); 
         getline(file, cmd);
         commands[key] = cmd;
     }
@@ -28,14 +28,26 @@ map<int, string> load_commands() {
 }
 
 void save_commands(const map<int, string>& commands) {
-    fs::create_directories(CONFIG_DIR); // ensure path exists
+    fs::create_directories(CONFIG_DIR);
     ofstream file(DB_FILE);
     for (const auto& [key, cmd] : commands) {
         file << key << " " << cmd << endl;
     }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
+    char* base = basename(argv[0]);
+string progname = base;
+
+if (progname == "cl" && argc >= 2) 
+{
+    string slot_arg = argv[1];
+    const char* fake_argv[] = {"clipb", "exec", slot_arg.c_str()};
+    argc = 3;
+    argv = const_cast<char**>(fake_argv);  // cast to modify argv
+}
+
     if (argc < 2) {
         cout << "Usage:\n"
              << "  clipb add \"<command>\" <slot>\n"
