@@ -6,9 +6,9 @@ xdata = pkgtype=pkg
 pkgver = 1.0.0-1
 pkgdesc = CLI clipboard
 url = https://github.com/Skartorion/clipb
-builddate = 1747165749
+builddate = 1747202847
 packager = Unknown Packager
-size = 47848
+size = 47888
 arch = x86_64
 license = GPL-3.0
 makedepend = gcc

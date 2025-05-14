@@ -14,7 +14,6 @@ namespace fs = filesystem;
 const string CONFIG_DIR = string(getenv("HOME")) + "/.config/clipb/";
 const string DB_FILE = CONFIG_DIR + "clipb_store.txt";
 
-// Load commands from file
 map<int, string> load_commands() {
     map<int, string> commands;
     ifstream file(DB_FILE);
@@ -23,14 +22,13 @@ map<int, string> load_commands() {
     int key;
     string cmd;
     while (file >> key) {
-        file.ignore(); // Ignore the space between key and command
+        file.ignore();
         getline(file, cmd);
         commands[key] = cmd;
     }
     return commands;
 }
 
-// Save commands to file
 void save_commands(const map<int, string>& commands) {
     fs::create_directories(CONFIG_DIR);
     ofstream file(DB_FILE);
@@ -39,15 +37,14 @@ void save_commands(const map<int, string>& commands) {
     }
 }
 
-// Function to safely convert a string to an integer with exception handling
 int safe_stoi(const string& str) {
     try {
         return stoi(str);
     } catch (const invalid_argument& e) {
-        cerr << "Error: Invalid slot argument. Please provide a valid number." << endl;
+        cerr << "Error: Invalid slot argument.\n";
         exit(1);
     } catch (const out_of_range& e) {
-        cerr << "Error: Slot number out of range." << endl;
+        cerr << "Error: Slot number out of range.\n";
         exit(1);
     }
 }
@@ -55,39 +52,50 @@ int safe_stoi(const string& str) {
 int main(int argc, char* argv[]) {
     string progname = basename(argv[0]);
 
-    // Handle `cl` command as a shortcut to `clipb exec`
+    static string slot_arg_str;
     if (progname == "cl" && argc >= 2) {
-        string slot_arg = argv[1];
-        static const char* fake_args[4];
-        fake_args[0] = "clipb";
-        fake_args[1] = "exec";
-        fake_args[2] = slot_arg.c_str();
+        slot_arg_str = argv[1];
+        static char* fake_args[4];
+        fake_args[0] = const_cast<char*>("clipb");
+        fake_args[1] = const_cast<char*>("exec");
+        fake_args[2] = const_cast<char*>(slot_arg_str.c_str());
         fake_args[3] = nullptr;
-
         argc = 3;
-        argv = const_cast<char**>(fake_args);
+        argv = fake_args;
     }
 
-    // Display help if no arguments or --help/-h is passed
-    if (argc < 2 || string(argv[1]) == "--help" || string(argv[1]) == "-h") {
-        cout << "clipb v1.0.0 — your personal command clipboard\n\n"
-             << "Usage:\n"
+    if (argc < 2) {
+        cout << "Usage:\n"
              << "  clipb add \"<command>\" <slot>\n"
              << "  clipb exec <slot>\n"
+             << "  clipb remove <slot>\n"
              << "  clipb list\n"
              << "  cl <slot>                (shortcut)\n"
              << "  clipb --version | -v\n"
-             << "  clipb --help | -h\n";
-        return 0;
-    }
-    
-    // Display version if --version or -v is passed
-    if (string(argv[1]) == "--version" || string(argv[1]) == "-v") {
-        cout << "clipb version 1.0.0\n";
+             << "  clipb --help    | -h\n";
         return 0;
     }
 
     string action = argv[1];
+
+    if (action == "--help" || action == "-h") {
+        cout << "clipb v1.0.0 — CLI clipboard\n\n"
+             << "Usage:\n"
+             << "  clipb add \"<command>\" <slot>\n"
+             << "  clipb exec <slot>\n"
+             << "  clipb remove <slot>\n"
+             << "  clipb list\n"
+             << "  cl <slot>                (shortcut)\n"
+             << "  clipb --version | -v\n"
+             << "  clipb --help    | -h\n";
+        return 0;
+    }
+
+    if (action == "--version" || action == "-v") {
+        cout << "clipb version 1.0.0\n";
+        return 0;
+    }
+
     auto commands = load_commands();
 
     if (action == "add") {
@@ -95,17 +103,16 @@ int main(int argc, char* argv[]) {
             cerr << "Usage: clipb add \"<command>\" <slot>\n";
             return 1;
         }
-        string command = argv[2];  // Command to store
-        int slot = safe_stoi(argv[3]);  // Slot to store it in
-        
-        // Check if the slot is already occupied
+        string command = argv[2];
+        int slot = safe_stoi(argv[3]);
+
         if (commands.count(slot)) {
             char confirm;
-            cout << "Slot " << slot << " is already occupied with: " << commands[slot] << endl;
-            cout << "Do you want to overwrite this slot? (y/n): ";
+            cout << "Slot " << slot << " already contains: " << commands[slot] << endl;
+            cout << "Overwrite? (y/n): ";
             cin >> confirm;
             if (confirm != 'y' && confirm != 'Y') {
-                cout << "Operation cancelled." << endl;
+                cout << "Cancelled.\n";
                 return 0;
             }
         }
@@ -119,23 +126,25 @@ int main(int argc, char* argv[]) {
             cerr << "Usage: clipb exec <slot>\n";
             return 1;
         }
-
-        // Validate the slot argument
-        string slot_arg = argv[2];
-        try {
-            int slot = safe_stoi(slot_arg);
-            if (commands.count(slot)) {
-                cout << "Executing: " << commands[slot] << endl;
-                system(commands[slot].c_str());
-            } else {
-                cerr << "No command in slot " << slot << endl;
-            }
-        } catch (const invalid_argument& e) {
-            cerr << "Error: Slot argument must be a number." << endl;
+        int slot = safe_stoi(argv[2]);
+        if (commands.count(slot)) {
+            cout << "Executing: " << commands[slot] << endl;
+            system(commands[slot].c_str());
+        } else {
+            cerr << "No command in slot " << slot << endl;
+        }
+    }
+    else if (action == "remove") {
+        if (argc < 3) {
+            cerr << "Usage: clipb remove <slot>\n";
             return 1;
-        } catch (const out_of_range& e) {
-            cerr << "Error: Slot number out of range." << endl;
-            return 1;
+        }
+        int slot = safe_stoi(argv[2]);
+        if (commands.erase(slot)) {
+            save_commands(commands);
+            cout << "Removed slot " << slot << endl;
+        } else {
+            cout << "No command found in slot " << slot << endl;
         }
     }
     else if (action == "list") {
@@ -156,4 +165,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-    
